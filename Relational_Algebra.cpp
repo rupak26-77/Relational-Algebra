@@ -34,12 +34,11 @@ public:
         for (auto it : this->attributes)
         {
             printf("%-15s ", it.c_str());
-            //it.c_str() converts the C++ string to C-style string (const char*) for printf.
             printf(" | ");
         }
         cout << "\n";
         for (int i = 0; i <= 18 * attributes.size() + 2; i++) cout << "-";
-        //18 because each column has 15 chars + " | " (~3 extra chars)
+        //each column has 15 chars + " | " (~3 extra chars)
         cout << "\n";
         for (auto it : this->data)
         {
@@ -56,10 +55,12 @@ public:
         -------------------------------------
         1               | Alice           | 
         2               | Bob             | 
-
     */
 };
+
+//table name -> table pointer
 map<string, relation *> table_pointer ;
+
 relation *cross_prod(relation *r1, relation *r2)
 {
     if (r1 == NULL || r2 == NULL) return NULL;
@@ -180,6 +181,11 @@ relation *project(relation &r1, vector<string> attr)
         types.push_back(r1.types[r1.indexes[it]]);
     }
     relation *r = new relation(r1.table_name, attr, types);
+    /*
+        r1.data = { ["1","Rupak","IT"], ["2","Sidharth","HR"], ["3","Ankit","HR"] }
+        attr = ["name","dept"]
+        indices = [1,2]
+     */
     for (auto it : r1.data)
     {
         vector<string> temp_data;
@@ -212,25 +218,21 @@ int evaluate(string exp, vector<string> values, map<string, int> indices)
         {
             return -1;
         }
-        // cout<<s4<<"\n";
-        if (s4[0] == '\'')
+        if (s4[0] == '\'') 
         {
             s2.push(s4.substr(1, s4.length() - 2));
             continue;
         }
-
+        // Check if it's an operator
         else if ((s4[0] < 'a' || s4[0] > 'z') & (s4[0] < 'A' || s4[0] > 'Z') & (s4[0] < '0' || s4[0] > '9') & (s4[0] != '\''))
         {
-
-            // cout<<s4<<" - - - -";
             string y = s2.top();
             s2.pop();
             string x = s2.top();
             s2.pop();
-            // cout<<x<<" "<<y<<"\n";
-            int flag = 0;
+            int flag = 0;   //0 for numbers, 1 for strings/attributes
             if (indices.find(x) == indices.end())
-            {
+            {   // checking if x is a column name or numeric number
                 for (int i = 0; i < x.length(); i++)
                 {
                     if ((x[i] >= 'a' && x[i] <= 'z') || (x[i] >= 'A' && x[i] <= 'Z'))
@@ -259,12 +261,10 @@ int evaluate(string exp, vector<string> values, map<string, int> indices)
                 }
                 else if (s4 == "<")
                 {
-                    // cout<<x<<" "<<y<<" "<<(x<y)<<"\n";
                     s2.push(to_string(x < y));
                 }
                 else if (s4 == ">")
                 {
-                    // cout<<x<<" "<<y<<" "<<(x>y)<<"\n";
                     s2.push(to_string(x > y));
                 }
                 else if (s4 == ">=")
@@ -280,9 +280,9 @@ int evaluate(string exp, vector<string> values, map<string, int> indices)
                     s2.push(to_string(x != y));
                 }
             }
+            // Integer arithmetic/comparison
             else
             {
-
                 // int x1 = 1 , y1=2;
                 for (int i = 0; i < x.length(); i++)
                 {
@@ -353,6 +353,7 @@ int evaluate(string exp, vector<string> values, map<string, int> indices)
                 }
             }
         }
+        //s4 is Operand (attribute name or numeric literal)
         else
         {
             int flag = 0;
@@ -369,7 +370,7 @@ int evaluate(string exp, vector<string> values, map<string, int> indices)
                     s2.push((values[indices[s4]]));
                 else
                 {
-                    return -1;
+                    return -1; // Invalid attribute name
                 }
             }
             else
@@ -378,7 +379,7 @@ int evaluate(string exp, vector<string> values, map<string, int> indices)
             }
         }
     }
-    // return 1;
+    // After processing all tokens, the stack should contain the final result
     int flag = 0;
     for (auto it : s2.top())
     {
@@ -389,7 +390,6 @@ int evaluate(string exp, vector<string> values, map<string, int> indices)
         return flag;
     return stoi(s2.top());
 }
-
 relation *seelect(string exp, relation &r)
 {
     relation *r1 = new relation(r.table_name, r.attributes, r.types);
@@ -477,7 +477,6 @@ string postfix(string s)
     return s3;
 }
 
-int x = 0;
 relation *paarse(string querry)
 {
     int n = querry.length();
@@ -492,6 +491,7 @@ relation *paarse(string querry)
     querry = querry.substr(y, n - y);
     if (querry[0] == 'S')
     {
+        // S [ pnum > 3 & dnum < 3 ] { proj }
         int start = 0, fin = 0;
         int pred_s = -1, pred_e;
         int rel_s = 0, rel_f = 0;
@@ -535,6 +535,7 @@ relation *paarse(string querry)
         }
         return seelect(pred, *r);
     }
+    // P[attribute1 attribute2 ...]{relation_expression}
     else if (querry[0] == 'P')
     {
         int start = 0;
@@ -982,7 +983,7 @@ int main()
     r9->data.insert({"a1", "b1", "c3", "d3"});
     r9->data.insert({"a2", "b2", "c1", "d1"});
     r9->data.insert({"a2", "b2", "c3", "d3"});
-    string querry8 = "D { P [ c d ] { r9 } } { P [ c d ] { D { C { r8 } { P [ c d ] { r9 } } } { r9 } } }";
+    string querry8 = "D { P [ c d ] { r9 } } { P [ c d ] { r9 } } } { r9 } { P [ c d ] { D { C { r8 } } }";
     relation *r10 = paarse(querry8);
     r10->display();
     cout << "\n\n\n";
